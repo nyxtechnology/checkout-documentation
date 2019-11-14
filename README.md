@@ -26,6 +26,7 @@ socket.emit('zipcode:fetch', {
   zipcode: '68900075'
 })
 ```
+---
 ### cities:fetch
 Search service that retrieves a list of cities from Brazil:
 
@@ -37,6 +38,7 @@ socket.emit('cities:fetch', {
   }
 })
 ```
+---
 ### freight:fetch
 Freight calculation service:
 
@@ -63,6 +65,7 @@ socket.emit('freight:fetch', {
   }
 })
 ```
+---
 ### credit-card:encrypter
 Credit card data encryption service:
 
@@ -82,6 +85,7 @@ socket.emit('credit-card:encrypter', {
   }
 })
 ```
+---
 ### credit-card:post
 Storage service that stores credit card data by linking it to a `userId`:
 
@@ -108,6 +112,7 @@ socket.emit('credit-card:post', {
   }
 })
 ```
+---
 ### credit-card:fetch
 Service that recovers saved credit card data from your `userId`:
 
@@ -121,7 +126,7 @@ socket.emit('credit-card:fetch', {
   }
 })
 ```
-
+---
 ### credit-card:fetch:by-external-id
 Service that retrieves credit card data for an externalId (ID used by Wirecard):
 
@@ -135,6 +140,7 @@ socket.emit('credit-card:fetch:by-external-id', {
   }
 })
 ```
+---
 ### checkout:create:
 Service that creates a checkout:
 
@@ -163,6 +169,7 @@ socket.emit('checkout:create', {
   }
 })
 ```
+---
 ### checkout:close:
 Service to close the checkout and send the data to the Wirecard, this method takes two forms of payment: `credit-card` and` bank-slip` that must be passed in the `method` parameter:
 
@@ -178,7 +185,7 @@ socket.emit('checkout:close', {
   }
 })
 ```
-
+---
 ### checkout:post:customer
 Store service for credit card customer data:
 
@@ -221,4 +228,147 @@ socket.emit('checkout:post:customer', {
     }
   }
 })
+```
+---
+### checkout:post:products
+Store service for product data to be checked out:
+
+```js
+socket.emit('checkout:post:products', {
+  socketID: 'abc',
+  data: {
+    checkoutNumber,
+    products: [{
+      id: '1',
+      name: 'xxx',
+      quantity: 100,
+      price: 1032
+    }]
+  }
+})
+```
+---
+### checkout:put:products
+Update service that modifies information for a given product based on an `id`:
+
+```js
+socket.emit('checkout:put:products', {
+  socketID: 'abc',
+  data: {
+    checkoutNumber,
+    products: [{
+      id: '1',
+      name: 'yyy',
+      quantity: 200,
+      price: 2064
+    }]
+  }
+})
+```
+---
+## Webhook
+
+We have resubmitted all notifications received from Wirecard. 
+To do this you must register your hook using the http://your-project-checkout.nyx.tc/preferences 
+route (POST) which receives the following parameters:
+
+| Parametro | Descrição |
+| --------  | -------- |
+| media     | An array of strings for notification types. Receive: `PAYMENT` |
+| events    | An array of strings containing the notification event types. All payments events `[CHECKOUT.CLOSED, CHECKOUT.CREATED, CHECKOUT.POST_CUSTOMER, CHECKOUT.POST_PRODUCTS, CHECKOUT.PUT_PRODUCTS]` and the [status for Wirecard PAYMENT events](https://dev.wirecard.com.br/reference#section-pagamentos) `[PAYMENT.CREATED, PAYMENT.WAITING, PAYMENT.IN_ANALYSIS, PAYMENT.PRE_AUTHORIZED, PAYMENT.AUTHORIZED, PAYMENT.CANCELLED, PAYMENT.REFUNDED, PAYMENT.REVERSED, PAYMENT.SETTLED]`|
+| target    | Your notification receiving URL |
+| tokenClient | String containing a client token|
+
+#### Example
+
+``` js
+curl -X POST http://your-project-checkout.nyx.tc/preferences \
+-d '{
+      "media": ["PAYMENT"],
+      "events": ["CHECKOUT_CREATED", "CHECKOUT_CLOSED"],
+      "target": "http://your-project.com/checkout-notifications",
+      "tokenClient": "<secret>"
+    }'
+
+# POST /preferences HTTP/1.1
+# {
+#     "media": [
+#         "PAYMENT"
+#     ],
+#     "events": [
+#         "CHECKOUT_CREATED",
+#         "CHECKOUT_CLOSED"
+#     ],
+#     "target": "http://nameless.com/notify",
+#     "token": "a50d-62bc070b5e6b-cc8a"
+#     "id": "PR-DC53FD0A947"
+# }
+```
+
+For [Wirecard](https://dev.wirecard.com.br/reference#section-pagamentos) events WIRECARD media and exclusive events should be used:
+
+``` js
+curl -X POST http://your-project-checkout.nyx.tc/preferences \
+-d '{
+      "media": ["PAYMENT"],
+      "events": ["AUTHORIZED"],
+      "target": "http://your-project.com/checkout-notifications",
+      "tokenClient": "<secret>"
+    }'
+
+# POST /preferences HTTP/1.1
+# {
+#     "media": [
+#         "PAYMENT"
+#     ],
+#     "events": [
+#         "AUTHORIZED"
+#     ],
+#     "target": "http://nameless.com/notify",
+#     "token": "a50d-62bc070b5e6b-cc8a"
+#     "id": "PR-DC53FD0A947"
+# }
+```
+---
+### How to remove a webhook?
+
+Registered hooks can be removed by the "id" provided during your registration, the return should be 204:
+
+#### Example
+
+``` js
+curl -X POST http://your-project-checkout.nyx.tc/preferences/remove \
+-d '{
+      "id": "PR-DC53FD0A947",
+      "tokenClient": "<secret>"
+    }'
+
+# POST /preferences/remove HTTP/1.1
+# 204
+```
+---
+### How to recover webhooks?
+
+#### Example
+
+``` js
+curl -X GET http://your-project-checkout.nyx.tc/preferences/notifications
+
+# GET /preferences/notifications HTTP/1.1
+# {
+#     "data": [{
+#          "media": [
+#              "PAYMENT"
+#          ],
+#          "events": [
+#              "CHECKOUT_CREATED"
+#              "CHECKOUT_CLOSED"
+#              "AUTHORIZED"
+#          ],
+#          "target": "http://nameless.com/notify",
+#          "token": "a50d-62bc070b5e6b-cc8a"
+#          "id": "PR-DC53FD0A947"
+#          "updatedAt": "2019-06-07T18:43:27.014Z"
+#     }]
+# }
 ```
